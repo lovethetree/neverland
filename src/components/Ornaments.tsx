@@ -77,9 +77,21 @@ const InstancedOrnaments = ({ count, geometry, material, weight, scale = 1, mode
       
       // Rotation: Time-based to avoid accumulation issues
       if (!isFormed) {
+         // Calculate distance from center
+         const distanceFromCenter = Math.sqrt(x ** 2 + y ** 2 + z ** 2);
+         
+         // Base radius in formed mode (average of tree radius)
+         const baseRadius = 3.5; // Average radius of the tree in formed mode
+         
+         // Calculate dynamic speed factor: inverse proportional to distance
+         // This ensures consistent visual rotation speed regardless of distance from center
+         const speedFactor = baseRadius / Math.max(distanceFromCenter, 1); // Avoid division by zero
+         
+         // Original rotation speeds: X=0.05, Y=0.025
+         // Apply speed factor to maintain consistent visual rotation speed
          tempObject.rotation.set(
-            time * 0.2 + i * 0.1,
-            time * 0.1 + i * 0.1,
+            time * 0.05 * speedFactor + i * 0.1,  // X轴旋转速度
+            time * 0.025 * speedFactor + i * 0.1, // Y轴旋转速度
             0
          );
       } else {
@@ -181,3 +193,5 @@ export const OrnamentsSystem = () => {
     </group>
   );
 };
+
+

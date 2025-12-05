@@ -31,8 +31,9 @@ const PhotoFrame = ({ url, index, total }: { url: string, index: number, total: 
   }, [texture, url]);
 
   // Generate unique positions
-  const { chaosPos, targetPos } = useMemo(() => {
-    // Chaos: Random in sphere
+  const { chaosPos, targetPos, galleryPos } = useMemo(() => {
+    // Chaos: Random in sphere (Keep for initial position or other effects if needed, 
+    // but we will use galleryPos for !isFormed)
     const chaos = randomPointInSphere(SPHERE_RADIUS * 1.2);
     
     // Target: Distributed on cone using Golden Angle Spiral (Phyllotaxis)
@@ -64,7 +65,35 @@ const PhotoFrame = ({ url, index, total }: { url: string, index: number, total: 
     
     const target = new THREE.Vector3(x, finalY, z);
     
-    return { chaosPos: chaos, targetPos: target };
+    // Gallery Position (Carousel/Cylinder Layout) for Chaos Mode
+    // Create a multi-tiered cylinder "carousel" effect
+    const isMobile = isMobileDevice();
+    const radius = isMobile ? 22 : 18; // Radius of the carousel
+    
+    // Distribute across rows to avoid overcrowding
+    // Base rows on total count. ~10-12 items per row is good.
+    const itemsPerRow = 12;
+    const totalRows = Math.ceil(total / itemsPerRow);
+    
+    const row = Math.floor(index / itemsPerRow);
+    const indexInRow = index % itemsPerRow;
+    
+    // Calculate angle: distribute evenly around the circle
+    // Offset odd rows slightly for a brick-pattern look
+    const angleStep = (Math.PI * 2) / itemsPerRow;
+    const rowOffset = (row % 2) * (angleStep / 2);
+    const thetaCarousel = indexInRow * angleStep + rowOffset;
+    
+    const rowHeight = 3.5;
+    // Center vertically around camera height (approx y=4)
+    const gy = (row - (totalRows - 1) / 2) * rowHeight + 4;
+    
+    const gx = radius * Math.sin(thetaCarousel);
+    const gz = radius * Math.cos(thetaCarousel);
+    
+    const gallery = new THREE.Vector3(gx, gy, gz);
+
+    return { chaosPos: chaos, targetPos: target, galleryPos: gallery };
   }, [index, total]);
 
   // Current position for lerping
@@ -93,31 +122,73 @@ const PhotoFrame = ({ url, index, total }: { url: string, index: number, total: 
       return new THREE.Quaternion().setFromEuler(dummy.rotation);
   }, [targetPos]);
 
+  // Calculate aspect ratio and size
+  const { width, height } = useMemo(() => {
+      const img = texture.image;
+      const aspect = img ? img.width / img.height : 1;
+      
+      // Fix size logic: 
+      // Keep roughly same area but respect aspect ratio
+      // Base height 2.0
+      const baseHeight = 2.0;
+      const w = baseHeight * aspect;
+      const h = baseHeight;
+      
+      return { width: w, height: h };
+  }, [texture.image]);
+
   useFrame((_, delta) => {
     if (mesh.current) {
-      const speed = 2.0 * delta;
-      const target = isFormed ? targetPos : chaosPos;
+      // Calculate base speed
+      const baseSpeed = 0.5 * delta;
+      
+      // If formed -> go to tree target. If not formed -> go to gallery grid.
+      const target = isFormed ? targetPos : galleryPos;
       
       // Lerp Position
-      currentPos.current.lerp(target, speed);
+      currentPos.current.lerp(target, baseSpeed);
       mesh.current.position.copy(currentPos.current);
       
-      // Rotation: random in chaos, leaf-like orientation in formed
+      // Rotation: 
+      // Formed: leaf-like orientation
+      // Chaos (Gallery): Face camera (0,0,0) or look at camera position
       if (isFormed) {
           const qCurrent = mesh.current.quaternion;
-          qCurrent.slerp(targetQuat, speed);
+          qCurrent.slerp(targetQuat, baseSpeed);
       } else {
-          mesh.current.rotation.x += delta * 0.5;
-          mesh.current.rotation.y += delta * 0.2;
+          // Smoothly rotate to face OUTWARD from the center
+          // Center is (0, y, 0)
+          const qCurrent = mesh.current.quaternion;
+          
+          // Calculate distance from center (0, y, 0)
+          const centerY = mesh.current.position.y;
+          const distanceFromCenter = Math.sqrt(
+              mesh.current.position.x ** 2 + 
+              (mesh.current.position.z) ** 2
+          );
+          
+          // Base radius in formed mode (average of tree radius)
+          const baseRadius = 3.5; // Average radius of the tree in formed mode
+          
+          // Calculate adjusted speed: inverse proportional to distance for same visual speed
+          const adjustedSpeed = baseSpeed * (baseRadius / distanceFromCenter);
+          
+          const dummy = new THREE.Object3D();
+          dummy.position.copy(mesh.current.position);
+          dummy.lookAt(0, centerY, 0); 
+          dummy.rotateY(Math.PI); // Face outward (away from center) so camera looking from outside sees front
+          
+          const targetQ = new THREE.Quaternion().setFromEuler(dummy.rotation);
+          qCurrent.slerp(targetQ, adjustedSpeed);
       }
     }
   });
 
   return (
-    <group ref={mesh} scale={isFormed ? 0.8 : 0.4}>
+    <group ref={mesh} scale={isFormed ? 0.8 : 1.0}>
         {/* Photo */}
         <mesh position={[0, 0, 0]} rotation={[0, 0, 0]}>  {/* Explicitly set no rotation */}
-            <planeGeometry args={[1.4, 1.9]} />
+            <planeGeometry args={[width, height]} />
             <meshBasicMaterial 
               map={texture} 
               side={THREE.DoubleSide} 
@@ -147,3 +218,6 @@ export const PhotoOrnaments = () => {
     </group>
   );
 };
+
+
+
