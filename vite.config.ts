@@ -5,7 +5,8 @@ import path from 'path'
 
 // https://vitejs.dev/config/
 export default defineConfig(({ mode }) => {
-  const isVercel = process.env.VERCEL === '1';
+  // Vercel 部署时会自动注入 VERCEL 环境变量
+  const isVercel = !!process.env.VERCEL;
   
   // Dynamically get the repository name from the current directory name
   // process.cwd() returns the absolute path, so we take the last part (folder name)
