@@ -99,28 +99,30 @@ const PhotoFrame = ({ url, index, total }: { url: string, index: number, total: 
   // Current position for lerping
   const currentPos = useRef(chaosPos.clone());
   
-  // Calculate target orientation quaternion so photos are aligned consistently with the tree
-  const targetQuat = useMemo(() => {
-      // 1. Base orientation: Look outward from center
+  // Calculate target orientation quaternions so photos are aligned consistently
+  const { treeQuat, galleryQuat } = useMemo(() => {
+      // 1. Tree Orientation: Look outward from center + tilt
       const dummy = new THREE.Object3D();
       dummy.position.copy(targetPos);
       dummy.lookAt(0, targetPos.y, 0); 
       dummy.rotateY(Math.PI); // Now facing outward
       
-      // 2. Ensure consistent upright orientation
       // Set pitch based on tree slope but ensure photos are always facing outward properly
       const slopeAngle = Math.atan2(TREE_RADIUS, TREE_HEIGHT);
-      
-      // Keep photos flat against the tree surface with minimal tilt
-      // Use a small negative tilt to ensure photos face outward consistently
       const consistentTilt = -slopeAngle * 1.8; // Small outward tilt
       
-      // Calculate rotation to align with tree surface
       dummy.rotateX(consistentTilt);
+      const tQuat = new THREE.Quaternion().setFromEuler(dummy.rotation);
       
-      // Create final quaternion with consistent orientation
-      return new THREE.Quaternion().setFromEuler(dummy.rotation);
-  }, [targetPos]);
+      // 2. Gallery Orientation: Face outward from cylinder center (0, y, 0)
+      const dummy2 = new THREE.Object3D();
+      dummy2.position.copy(galleryPos);
+      dummy2.lookAt(0, galleryPos.y, 0);
+      dummy2.rotateY(Math.PI); // Face outward
+      const gQuat = new THREE.Quaternion().setFromEuler(dummy2.rotation);
+      
+      return { treeQuat: tQuat, galleryQuat: gQuat };
+  }, [targetPos, galleryPos]);
 
   // Calculate aspect ratio and size
   const { width, height } = useMemo(() => {
@@ -139,48 +141,19 @@ const PhotoFrame = ({ url, index, total }: { url: string, index: number, total: 
 
   useFrame((_, delta) => {
     if (mesh.current) {
-      // Calculate base speed
-      const baseSpeed = 0.5 * delta;
-      
+      const speed = 2.0 * delta;
       // If formed -> go to tree target. If not formed -> go to gallery grid.
       const target = isFormed ? targetPos : galleryPos;
       
       // Lerp Position
-      currentPos.current.lerp(target, baseSpeed);
+      currentPos.current.lerp(target, speed);
       mesh.current.position.copy(currentPos.current);
       
       // Rotation: 
-      // Formed: leaf-like orientation
-      // Chaos (Gallery): Face camera (0,0,0) or look at camera position
-      if (isFormed) {
-          const qCurrent = mesh.current.quaternion;
-          qCurrent.slerp(targetQuat, baseSpeed);
-      } else {
-          // Smoothly rotate to face OUTWARD from the center
-          // Center is (0, y, 0)
-          const qCurrent = mesh.current.quaternion;
-          
-          // Calculate distance from center (0, y, 0)
-          const centerY = mesh.current.position.y;
-          const distanceFromCenter = Math.sqrt(
-              mesh.current.position.x ** 2 + 
-              (mesh.current.position.z) ** 2
-          );
-          
-          // Base radius in formed mode (average of tree radius)
-          const baseRadius = 3.5; // Average radius of the tree in formed mode
-          
-          // Calculate adjusted speed: inverse proportional to distance for same visual speed
-          const adjustedSpeed = baseSpeed * (baseRadius / distanceFromCenter);
-          
-          const dummy = new THREE.Object3D();
-          dummy.position.copy(mesh.current.position);
-          dummy.lookAt(0, centerY, 0); 
-          dummy.rotateY(Math.PI); // Face outward (away from center) so camera looking from outside sees front
-          
-          const targetQ = new THREE.Quaternion().setFromEuler(dummy.rotation);
-          qCurrent.slerp(targetQ, adjustedSpeed);
-      }
+      // Formed: leaf-like orientation (treeQuat)
+      // Chaos (Gallery): Face camera/outward (galleryQuat)
+      const targetR = isFormed ? treeQuat : galleryQuat;
+      mesh.current.quaternion.slerp(targetR, speed);
     }
   });
 
@@ -218,6 +191,7 @@ export const PhotoOrnaments = () => {
     </group>
   );
 };
+
 
 
 

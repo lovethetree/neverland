@@ -37,11 +37,19 @@ const ResponsiveCamera = () => {
 const TreeContent = () => {
   const groupRef = useRef<THREE.Group>(null);
   const isMobile = useMemo(() => isMobileDevice(), []);
+  const isFormed = useStore((state) => state.isFormed);
 
   useFrame((_, delta) => {
     if (groupRef.current) {
       // 移动端降低旋转速度，减少性能消耗
-      const rotationSpeed = isMobile ? 0.07 : 0.1;
+      // Base rotation speed
+      let rotationSpeed = isMobile ? 0.07 : 0.1;
+      
+      // If in Chaos/Gallery mode, slow down significantly for better viewing experience
+      if (!isFormed) {
+          rotationSpeed = rotationSpeed * 0.3; // 
+      }
+      
       groupRef.current.rotation.y += delta * rotationSpeed;
     }
   });

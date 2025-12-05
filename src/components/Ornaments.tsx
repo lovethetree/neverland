@@ -45,7 +45,8 @@ const InstancedOrnaments = ({ count, geometry, material, weight, scale = 1, mode
     // Adjust speed based on weight
     // weight 1 (heavy) -> slow lerp factor
     // weight 0 (light) -> fast lerp factor
-    const baseSpeed = 2.0;
+    // Increased base speed by 1.5x for faster transitions as requested
+    const baseSpeed = 3.0; // 2.0 * 1.5 = 3.0, faster transitions
     const lerpFactor = THREE.MathUtils.clamp(baseSpeed * (1.0 - weight * 0.5) * delta, 0, 1);
     
     let needsUpdate = false;
@@ -89,9 +90,10 @@ const InstancedOrnaments = ({ count, geometry, material, weight, scale = 1, mode
          
          // Original rotation speeds: X=0.05, Y=0.025
          // Apply speed factor to maintain consistent visual rotation speed
+         // Multiply by 0.5 as requested to slow down chaotic mode even further
          tempObject.rotation.set(
-            time * 0.05 * speedFactor + i * 0.1,  // X轴旋转速度
-            time * 0.025 * speedFactor + i * 0.1, // Y轴旋转速度
+            time * 0.05 * speedFactor * 0.5 + i * 0.1,  // X轴旋转速度
+            time * 0.025 * speedFactor * 0.5 + i * 0.1, // Y轴旋转速度
             0
          );
       } else {
@@ -193,5 +195,7 @@ export const OrnamentsSystem = () => {
     </group>
   );
 };
+
+
 
 
