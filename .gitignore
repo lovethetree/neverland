@@ -1,5 +1,6 @@
 /dist
 /src/images
+/src/images - 副本
 .vite
 /node_modules
 .env

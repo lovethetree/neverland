@@ -6,7 +6,7 @@
   "engines": {
     "node": ">=18"
   },
-  "homepage": "https://JustLuoxi.github.io/christmas-tree",
+  "homepage": "https://lovethetree.github.io/neverland",
   "scripts": {
     "dev": "vite",
     "build": "vite build",

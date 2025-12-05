@@ -11,18 +11,53 @@ if (!fs.existsSync('dist')) {
 // 获取当前目录
 const currentDir = process.cwd();
 
+// 动态更新 package.json 中的 homepage
+function updatePackageJson() {
+  try {
+    const packageJsonPath = path.join(currentDir, 'package.json');
+    const packageJson = require(packageJsonPath);
+    const repoName = path.basename(currentDir);
+    
+    // 更新 homepage
+    packageJson.homepage = `https://lovethetree.github.io/${repoName}`;
+    
+    // 写回文件
+    fs.writeFileSync(packageJsonPath, JSON.stringify(packageJson, null, 2) + '\n');
+    console.log(`Updated package.json homepage to: ${packageJson.homepage}`);
+  } catch (error) {
+    console.error('Failed to update package.json:', error.message);
+  }
+}
+
 // 部署函数
 function deploy() {
   try {
+    // 先更新 package.json
+    updatePackageJson();
+
     console.log('Deploying to GitHub Pages...');
     
     // 进入dist目录
     process.chdir('dist');
     
+    // 获取当前文件夹名作为仓库名
+    const repoName = path.basename(currentDir);
+    const remoteUrl = `https://github.com/lovethetree/${repoName}.git`;
+    
+    console.log(`Detected repository: ${repoName}`);
+    console.log(`Remote URL: ${remoteUrl}`);
+    
     // 初始化git仓库
     if (!fs.existsSync('.git')) {
       execSync('git init', { stdio: 'inherit' });
-      execSync('git remote add origin https://github.com/JustLuoxi/christmas-tree.git', { stdio: 'inherit' });
+      execSync(`git remote add origin ${remoteUrl}`, { stdio: 'inherit' });
+    } else {
+      // 如果已存在，更新 remote url
+      try {
+          execSync(`git remote set-url origin ${remoteUrl}`, { stdio: 'inherit' });
+      } catch (e) {
+          execSync(`git remote add origin ${remoteUrl}`, { stdio: 'inherit' });
+      }
     }
     
     // 配置git用户信息（可选，确保能提交）
