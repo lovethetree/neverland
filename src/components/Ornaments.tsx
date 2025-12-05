@@ -2,7 +2,7 @@ import { useRef, useMemo, useLayoutEffect } from 'react';
 import { useFrame, useThree } from '@react-three/fiber';
 import * as THREE from 'three';
 import { useStore } from '../store';
-import { generateParticlesData, isMobileDevice } from '../utils';
+import { generateParticlesData, isMobileDevice, CHAOS_REDUCTION_RATIO } from '../utils';
 
 interface InstancedOrnamentsProps {
   count: number;
@@ -12,7 +12,7 @@ interface InstancedOrnamentsProps {
   scale?: number;
   mode?: 'spiral' | 'volume' | 'surface' | 'phyllotaxis';
   angleOffset?: number;
-  reductionRatio?: number; // Keep 1/N particles in chaos mode (e.g. 3 = keep 1/3)
+  reductionRatio?: number; // 0 to 1, percentage to keep in chaos mode
 }
 
 const tempObject = new THREE.Object3D();
@@ -78,11 +78,19 @@ const InstancedOrnaments = ({ count, geometry, material, weight, scale = 1, mode
       
       // Scale Logic
       let targetS = scale;
-      // If reductionRatio is set (> 1) and we are in chaos mode (!isFormed)
-      if (reductionRatio > 1 && !isFormed) {
-          // Keep only if index is divisible by ratio
-          if (i % reductionRatio !== 0) {
-              targetS = 0;
+      // Unified reduction ratio logic
+      if (!isFormed && reductionRatio > 0) {
+          if (reductionRatio <= 1.0) {
+             // Percentage based (e.g. 0.2 keeps 20%)
+             // Use modulo 100 for 1% granularity to distribute visibility
+             if ((i % 100) >= (reductionRatio * 100)) {
+                 targetS = 0;
+             }
+          } else {
+             // Legacy integer support (> 1) - e.g. 10 means keep 1/10
+             if (i % Math.floor(reductionRatio) !== 0) {
+                 targetS = 0;
+             }
           }
       }
       
@@ -193,7 +201,7 @@ export const OrnamentsSystem = () => {
         scale={0.6} 
         mode={'phyllotaxis'}
         angleOffset={0}
-        reductionRatio={10} // Keep 1/10
+        reductionRatio={CHAOS_REDUCTION_RATIO}
       />
       
       {/* Gold Spheres */}
@@ -205,7 +213,7 @@ export const OrnamentsSystem = () => {
         scale={0.35} 
         mode={'phyllotaxis'}
         angleOffset={2.1} // Offset to interleave
-        reductionRatio={10} // Keep 1/10
+        reductionRatio={CHAOS_REDUCTION_RATIO}
       />
       
       {/* Tiny Lights */}
@@ -217,7 +225,7 @@ export const OrnamentsSystem = () => {
         scale={0.12} 
         mode={'phyllotaxis'}
         angleOffset={4.2} // Offset to interleave
-        reductionRatio={3} // Keep 1/3
+        reductionRatio={CHAOS_REDUCTION_RATIO}
       />
     </group>
   );

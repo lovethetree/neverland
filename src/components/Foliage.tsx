@@ -1,7 +1,7 @@
 import { useRef, useMemo } from 'react';
 import { useFrame, useThree } from '@react-three/fiber';
 import * as THREE from 'three';
-import { generateParticlesData, isMobileDevice } from '../utils';
+import { generateParticlesData, isMobileDevice, CHAOS_REDUCTION_RATIO } from '../utils';
 import { useStore } from '../store';
 
 const vertexShader = `
@@ -11,7 +11,7 @@ const vertexShader = `
   
   attribute vec3 aChaos;
   attribute vec3 aTarget;
-  attribute float aVisibility; // 1.0 = visible in chaos, 0.0 = hidden in chaos
+  attribute float aVisibility;
   
   varying float vAlpha;
   varying vec3 vColor;
@@ -98,12 +98,13 @@ const Foliage = () => {
   
   const { chaosPositions, targetPositions } = useMemo(() => generateParticlesData(count, 'surface'), [count]);
   
-  // Generate visibility attribute: 1/3 visible in chaos mode
+  // Generate visibility attribute based on CHAOS_REDUCTION_RATIO
   const visibilityArray = useMemo(() => {
     const arr = new Float32Array(count);
     for(let i = 0; i < count; i++) {
-        // Keep 1/3 (if i % 3 == 0)
-        arr[i] = (i % 3 === 0) ? 1.0 : 0.0;
+        // Keep portion defined by CHAOS_REDUCTION_RATIO
+        // e.g. 0.2 means keep 20%
+        arr[i] = (i % 100 < CHAOS_REDUCTION_RATIO * 100) ? 1.0 : 0.0;
     }
     return arr;
   }, [count]);

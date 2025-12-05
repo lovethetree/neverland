@@ -4,6 +4,7 @@ import * as THREE from 'three';
 export const TREE_HEIGHT = 15;
 export const TREE_RADIUS = 7;
 export const SPHERE_RADIUS = 25;
+export const CHAOS_REDUCTION_RATIO = 1.0; // Controls chaos mode decoration/foliage density (0.2 = 20% of aggregation mode)
 
 // Mobile detection
 export const isMobileDevice = () => {
