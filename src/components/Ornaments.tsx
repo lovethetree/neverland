@@ -12,11 +12,12 @@ interface InstancedOrnamentsProps {
   scale?: number;
   mode?: 'spiral' | 'volume' | 'surface' | 'phyllotaxis';
   angleOffset?: number;
+  reduceInChaos?: boolean; // Whether to reduce count in chaos mode
 }
 
 const tempObject = new THREE.Object3D();
 
-const InstancedOrnaments = ({ count, geometry, material, weight, scale = 1, mode = 'spiral', angleOffset = 0 }: InstancedOrnamentsProps) => {
+const InstancedOrnaments = ({ count, geometry, material, weight, scale = 1, mode = 'spiral', angleOffset = 0, reduceInChaos = false }: InstancedOrnamentsProps) => {
   const meshRef = useRef<THREE.InstancedMesh>(null);
   const isFormed = useStore((state) => state.isFormed);
   
@@ -24,6 +25,9 @@ const InstancedOrnaments = ({ count, geometry, material, weight, scale = 1, mode
   
   // Store current positions for lerping in JS
   const currentPositions = useMemo(() => new Float32Array(chaosPositions), [chaosPositions]);
+  
+  // Store current scales for lerping
+  const currentScales = useMemo(() => new Float32Array(count).fill(scale), [count, scale]);
   
   useLayoutEffect(() => {
     if (meshRef.current) {
@@ -72,9 +76,22 @@ const InstancedOrnaments = ({ count, geometry, material, weight, scale = 1, mode
       currentPositions[idx + 1] = y;
       currentPositions[idx + 2] = z;
       
+      // Scale Logic
+      let targetS = scale;
+      if (reduceInChaos && !isFormed) {
+          // Keep only 1/10th (10%)
+          if (i % 10 !== 0) {
+              targetS = 0;
+          }
+      }
+      
+      const currentS = currentScales[i];
+      const newS = THREE.MathUtils.lerp(currentS, targetS, lerpFactor);
+      currentScales[i] = newS;
+      
       // Update Matrix
       tempObject.position.set(x, y, z);
-      tempObject.scale.setScalar(scale);
+      tempObject.scale.setScalar(newS);
       
       // Rotation: Time-based to avoid accumulation issues
       if (!isFormed) {
@@ -175,6 +192,7 @@ export const OrnamentsSystem = () => {
         scale={0.6} 
         mode={'phyllotaxis'}
         angleOffset={0}
+        reduceInChaos={true}
       />
       
       {/* Gold Spheres */}
@@ -186,6 +204,7 @@ export const OrnamentsSystem = () => {
         scale={0.35} 
         mode={'phyllotaxis'}
         angleOffset={2.1} // Offset to interleave
+        reduceInChaos={true}
       />
       
       {/* Tiny Lights */}
