@@ -12,12 +12,12 @@ interface InstancedOrnamentsProps {
   scale?: number;
   mode?: 'spiral' | 'volume' | 'surface' | 'phyllotaxis';
   angleOffset?: number;
-  reduceInChaos?: boolean; // Whether to reduce count in chaos mode
+  reductionRatio?: number; // Keep 1/N particles in chaos mode (e.g. 3 = keep 1/3)
 }
 
 const tempObject = new THREE.Object3D();
 
-const InstancedOrnaments = ({ count, geometry, material, weight, scale = 1, mode = 'spiral', angleOffset = 0, reduceInChaos = false }: InstancedOrnamentsProps) => {
+const InstancedOrnaments = ({ count, geometry, material, weight, scale = 1, mode = 'spiral', angleOffset = 0, reductionRatio = 0 }: InstancedOrnamentsProps) => {
   const meshRef = useRef<THREE.InstancedMesh>(null);
   const isFormed = useStore((state) => state.isFormed);
   
@@ -78,9 +78,10 @@ const InstancedOrnaments = ({ count, geometry, material, weight, scale = 1, mode
       
       // Scale Logic
       let targetS = scale;
-      if (reduceInChaos && !isFormed) {
-          // Keep only 1/10th (10%)
-          if (i % 10 !== 0) {
+      // If reductionRatio is set (> 1) and we are in chaos mode (!isFormed)
+      if (reductionRatio > 1 && !isFormed) {
+          // Keep only if index is divisible by ratio
+          if (i % reductionRatio !== 0) {
               targetS = 0;
           }
       }
@@ -192,7 +193,7 @@ export const OrnamentsSystem = () => {
         scale={0.6} 
         mode={'phyllotaxis'}
         angleOffset={0}
-        reduceInChaos={true}
+        reductionRatio={10} // Keep 1/10
       />
       
       {/* Gold Spheres */}
@@ -204,7 +205,7 @@ export const OrnamentsSystem = () => {
         scale={0.35} 
         mode={'phyllotaxis'}
         angleOffset={2.1} // Offset to interleave
-        reduceInChaos={true}
+        reductionRatio={10} // Keep 1/10
       />
       
       {/* Tiny Lights */}
@@ -216,6 +217,7 @@ export const OrnamentsSystem = () => {
         scale={0.12} 
         mode={'phyllotaxis'}
         angleOffset={4.2} // Offset to interleave
+        reductionRatio={3} // Keep 1/3
       />
     </group>
   );

@@ -11,6 +11,7 @@ const vertexShader = `
   
   attribute vec3 aChaos;
   attribute vec3 aTarget;
+  attribute float aVisibility; // 1.0 = visible in chaos, 0.0 = hidden in chaos
   
   varying float vAlpha;
   varying vec3 vColor;
@@ -50,7 +51,8 @@ const vertexShader = `
     
     // Size attenuation
     // Scale size by pixel ratio for consistent look on mobile/desktop
-    gl_PointSize = (250.0 * uPixelRatio) * (1.0 / -mvPosition.z);
+    float currentVisibility = mix(aVisibility, 1.0, uProgress);
+    gl_PointSize = (250.0 * uPixelRatio * currentVisibility) * (1.0 / -mvPosition.z);
     
     // Twinkle alpha
     vAlpha = 0.6 + 0.4 * sin(uTime * 3.0 + pos.x * 0.5 + pos.y * 0.5);
@@ -96,6 +98,16 @@ const Foliage = () => {
   
   const { chaosPositions, targetPositions } = useMemo(() => generateParticlesData(count, 'surface'), [count]);
   
+  // Generate visibility attribute: 1/3 visible in chaos mode
+  const visibilityArray = useMemo(() => {
+    const arr = new Float32Array(count);
+    for(let i = 0; i < count; i++) {
+        // Keep 1/3 (if i % 3 == 0)
+        arr[i] = (i % 3 === 0) ? 1.0 : 0.0;
+    }
+    return arr;
+  }, [count]);
+  
   const uniforms = useMemo(() => ({
     uTime: { value: 0 },
     uProgress: { value: 0 },
@@ -135,6 +147,12 @@ const Foliage = () => {
           count={count}
           array={targetPositions}
           itemSize={3}
+        />
+        <bufferAttribute
+          attach="attributes-aVisibility"
+          count={count}
+          array={visibilityArray}
+          itemSize={1}
         />
       </bufferGeometry>
       <shaderMaterial
