@@ -40,6 +40,9 @@ function deploy() {
     // 进入dist目录
     process.chdir('dist');
     
+    // 创建 .nojekyll 文件以防止 GitHub Pages 忽略某些文件
+    fs.writeFileSync('.nojekyll', '');
+    
     // 获取当前文件夹名作为仓库名
     const repoName = path.basename(currentDir);
     const remoteUrl = `https://github.com/lovethetree/${repoName}.git`;
