@@ -122,6 +122,12 @@ const InstancedOrnaments = ({ count, geometry, material, weight, scale = 1, mode
 
 export const OrnamentsSystem = () => {
   const isMobile = useMemo(() => isMobileDevice(), []);
+
+  // If on mobile, hide ornaments completely (except maybe the star which is separate)
+  // Return null to render nothing
+  if (isMobile) {
+      return null;
+  }
   
   // 调整装饰品数量 - 电脑端进一步减少10%
   const giftCount = isMobile ? 50 : 72;      // 电脑端礼物盒再减少10%
