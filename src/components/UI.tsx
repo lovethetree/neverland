@@ -23,7 +23,7 @@ const UI = () => {
           Merry Christmas
         </h1>
         <h2 className="text-xs md:text-base font-light text-white/70 tracking-widest border-b border-luxury-gold/30 pb-2 inline-block pr-8">
-          Christmas Tree
+          Xuexue Christmas Tree
         </h2>
       </div>
 
