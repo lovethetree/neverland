@@ -1,5 +1,5 @@
-import React, { useEffect, useRef } from 'react'
-import { Canvas } from '@tarojs/components'
+import React, { useEffect, useRef, useState } from 'react'
+import { Canvas, CoverView, View } from '@tarojs/components'
 import Taro from '@tarojs/taro'
 import { WechatPlatform } from 'three-platformize/src/WechatPlatform'
 import * as THREE from 'three-platformize'
@@ -11,6 +11,7 @@ export default function ThreeCanvas() {
   const sceneRef = useRef<ChristmasTreeScene | null>(null)
   const audioCtxRef = useRef<Taro.InnerAudioContext | null>(null)
   const lastToggleTime = useRef(0)
+  const [isPlaying, setIsPlaying] = useState(true)
 
   useEffect(() => {
     // Audio Init
@@ -19,7 +20,22 @@ export default function ThreeCanvas() {
     bgm.loop = true
     bgm.autoplay = true
     bgm.volume = 0.3
+    
+    // Some devices require explicit play after context creation or user interaction
     bgm.play()
+    
+    bgm.onPlay(() => {
+      console.log('BGM Started')
+      setIsPlaying(true)
+    })
+    bgm.onPause(() => {
+      console.log('BGM Paused')
+      setIsPlaying(false)
+    })
+    bgm.onError((res) => {
+      console.error('BGM Error', res)
+    })
+
     audioCtxRef.current = bgm
 
     const query = Taro.createSelectorQuery()
@@ -64,9 +80,10 @@ export default function ThreeCanvas() {
       }
     }
     
-    // Resume audio on interaction
-    if (audioCtxRef.current && audioCtxRef.current.paused) {
-      audioCtxRef.current.play()
+    // Resume audio on interaction if it was auto-blocked
+    if (audioCtxRef.current && audioCtxRef.current.paused && isPlaying) {
+        // If logic thinks it should be playing but it's paused (e.g. system interruption or auto-block), try play
+        audioCtxRef.current.play()
     }
   }
   const onTouchMove = (e) => {
@@ -76,15 +93,62 @@ export default function ThreeCanvas() {
     if (platformRef.current) platformRef.current.dispatchTouchEvent(e)
   }
 
+  const toggleMusic = (e) => {
+    e.stopPropagation() // Prevent canvas touch
+    if (audioCtxRef.current) {
+      if (isPlaying) {
+        audioCtxRef.current.pause()
+      } else {
+        audioCtxRef.current.play()
+      }
+    }
+  }
+
   return (
-    <Canvas
-      type="webgl"
-      id="three-canvas"
-      canvasId="three-canvas"
-      style={{ width: '100%', height: '100%' }}
-      onTouchStart={onTouchStart}
-      onTouchMove={onTouchMove}
-      onTouchEnd={onTouchEnd}
-    />
+    <View style={{ width: '100%', height: '100%', position: 'relative', backgroundColor: '#001100' }}>
+      <Canvas
+        type="webgl"
+        id="three-canvas"
+        canvasId="three-canvas"
+        style={{ width: '100%', height: '100%', display: 'block' }}
+        onTouchStart={onTouchStart}
+        onTouchMove={onTouchMove}
+        onTouchEnd={onTouchEnd}
+      />
+      
+      {/* UI Overlay using CoverView for Native Component compatibility */}
+      
+      {/* Top Left: Title */}
+      <CoverView style={{ position: 'absolute', top: '60px', left: '20px', pointerEvents: 'none' }}>
+        <CoverView style={{ color: '#D4AF37', fontSize: '18px', fontWeight: 'bold' }}>MERRY CHRISTMAS</CoverView>
+        <CoverView style={{ color: 'rgba(212, 175, 55, 0.6)', fontSize: '12px', marginTop: '4px' }}>Xuexue Christmas Tree</CoverView>
+        <CoverView style={{ width: '40px', height: '1px', backgroundColor: 'rgba(212, 175, 55, 0.3)', marginTop: '8px' }}></CoverView>
+      </CoverView>
+
+      {/* Top Right: Music Control */}
+      <CoverView 
+        style={{ 
+          position: 'absolute', 
+          top: '60px', 
+          right: '20px', 
+          border: '1px solid rgba(212, 175, 55, 0.5)', 
+          borderRadius: '15px', 
+          padding: '4px 12px', 
+          backgroundColor: 'rgba(0,0,0,0.2)',
+          zIndex: 9999
+        }}
+        onClick={toggleMusic}
+      >
+        <CoverView style={{ color: '#D4AF37', fontSize: '10px' }}>
+          {isPlaying ? 'MUSIC ON' : 'MUSIC OFF'}
+        </CoverView>
+      </CoverView>
+
+      {/* Bottom Right: Footer */}
+      <CoverView style={{ position: 'absolute', bottom: '30px', right: '20px', pointerEvents: 'none' }}>
+          <CoverView style={{ color: 'rgba(212, 175, 55, 0.4)', fontSize: '10px' }}>Jessie L. Edition-2025</CoverView>
+      </CoverView>
+
+    </View>
   )
 }

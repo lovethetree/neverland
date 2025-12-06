@@ -11,6 +11,10 @@ export class PhotoOrnaments {
   targetPositions: THREE.Vector3[] = [];
   galleryPositions: THREE.Vector3[] = [];
   
+  // Orientation data (Quaternions)
+  treeQuats: THREE.Quaternion[] = [];
+  galleryQuats: THREE.Quaternion[] = [];
+  
   currentPositions: THREE.Vector3[] = [];
   
   constructor() {
@@ -31,9 +35,12 @@ export class PhotoOrnaments {
              const aspect = tex.image.width / tex.image.height;
              // Keep area roughly constant or fix width
              // Let's fix height to 1.5 and adjust width
-             const h = 1.5;
-             const w = h * aspect;
-             mesh.scale.set(w, h, 1);
+             // Base height 2.0 from original
+             const baseHeight = 2.0;
+             const h = baseHeight;
+             const w = baseHeight * aspect;
+             
+             this.meshes[index].scale.set(w, h, 1);
          }
       });
       texture.colorSpace = THREE.SRGBColorSpace; // Ensure correct color
@@ -43,7 +50,9 @@ export class PhotoOrnaments {
       const material = new THREE.MeshBasicMaterial({ 
         map: texture, 
         side: THREE.DoubleSide,
-        transparent: true
+        transparent: true,
+        opacity: 1.0,
+        toneMapped: false
       });
       
       const mesh = new THREE.Mesh(geometry, material);
@@ -54,7 +63,8 @@ export class PhotoOrnaments {
       const chaos = randomPointInSphere(SPHERE_RADIUS * 1.2);
       this.chaosPositions.push(chaos);
       
-      // Target Position (Tree)
+      // --- Target Position (Tree Mode) ---
+      // Matches original: src/components/PhotoOrnaments.tsx
       const minY = -TREE_HEIGHT / 2 + 1.5; 
       const maxY = TREE_HEIGHT / 2 - 1.0;  
       const y = minY + (index / total) * (maxY - minY);
@@ -74,10 +84,9 @@ export class PhotoOrnaments {
       const z = r * Math.sin(theta);
       
       const target = new THREE.Vector3(x, finalY, z);
-      // Look at center (y-axis), but we handle rotation in update
       this.targetPositions.push(target);
       
-      // Gallery Position (Carousel)
+      // --- Gallery Position (Gallery Mode) ---
       const radius = isMobile ? 22 : 18;
       const itemsPerRow = 12;
       const totalRows = Math.ceil(total / itemsPerRow);
@@ -96,6 +105,30 @@ export class PhotoOrnaments {
       const gallery = new THREE.Vector3(gx, gy, gz);
       this.galleryPositions.push(gallery);
       
+      // --- Calculate Orientations (Quaternions) ---
+      
+      // 1. Tree Orientation
+      const dummy = new THREE.Object3D();
+      dummy.position.copy(target);
+      dummy.lookAt(0, target.y, 0); 
+      dummy.rotateY(Math.PI); // Face outward
+      
+      const slopeAngle = Math.atan2(TREE_RADIUS, TREE_HEIGHT);
+      const consistentTilt = -slopeAngle * 1.8; 
+      dummy.rotateX(consistentTilt);
+      
+      const tQuat = new THREE.Quaternion().setFromEuler(dummy.rotation);
+      this.treeQuats.push(tQuat);
+
+      // 2. Gallery Orientation
+      const dummy2 = new THREE.Object3D();
+      dummy2.position.copy(gallery);
+      dummy2.lookAt(0, gallery.y, 0);
+      dummy2.rotateY(Math.PI); // Face outward
+      
+      const gQuat = new THREE.Quaternion().setFromEuler(dummy2.rotation);
+      this.galleryQuats.push(gQuat);
+
       // Init Position
       mesh.position.copy(chaos);
       this.currentPositions.push(chaos.clone());
@@ -106,61 +139,20 @@ export class PhotoOrnaments {
   }
   
   update(delta: number, isFormed: boolean, time: number) {
-    const baseSpeed = 2.5;
+    const baseSpeed = 2.0; // Matches original speed = 2.0 * delta
     const lerpFactor = THREE.MathUtils.clamp(baseSpeed * delta, 0, 1);
     
     this.meshes.forEach((mesh, i) => {
-        const targetPos = isFormed ? this.targetPositions[i] : this.galleryPositions[i];
         const currentPos = this.currentPositions[i];
-        
+        const targetPos = isFormed ? this.targetPositions[i] : this.galleryPositions[i];
+        const targetQuat = isFormed ? this.treeQuats[i] : this.galleryQuats[i];
+
         // Lerp Position
         currentPos.lerp(targetPos, lerpFactor);
         mesh.position.copy(currentPos);
-        
-        // Orientation
-        if (isFormed) {
-            // Face outwards from center Y axis
-            mesh.lookAt(0, mesh.position.y, 0);
-            // Rotate 180 if needed? Plane usually faces +Z. 
-            // If we lookAt(0,y,0), +Z points to center. So back of plane faces out.
-            // We need to rotate Y by PI.
-            mesh.rotateY(Math.PI);
-            
-            // Add some gentle floating
-            mesh.position.y += Math.sin(time + i) * 0.002;
-        } else {
-            // Gallery Mode: Face Center
-            mesh.lookAt(0, mesh.position.y, 0);
-            mesh.rotateY(Math.PI);
-            
-            // Rotate carousel
-            const radius = Math.sqrt(mesh.position.x**2 + mesh.position.z**2);
-            const angle = Math.atan2(mesh.position.x, mesh.position.z) + delta * 0.1; // Slow rotation
-            
-            // Wait, we shouldn't modify position manually for rotation if we want to lerp to galleryPos.
-            // Actually, galleryPos is static. If we want the carousel to spin, galleryPos needs to rotate.
-            // Or simply rotate the whole group? No, chaos pos is separate.
-            
-            // Let's just stick to static gallery position for now to match logic, 
-            // or rotate the target gallery position.
-            const cos = Math.cos(time * 0.1);
-            const sin = Math.sin(time * 0.1);
-            
-            // Rotate galleryPos[i] around Y
-            const gPos = this.galleryPositions[i];
-            const rx = gPos.x * cos - gPos.z * sin;
-            const rz = gPos.x * sin + gPos.z * cos;
-            
-            // Override target for Lerp
-            const rotTarget = new THREE.Vector3(rx, gPos.y, rz);
-            
-            // Re-lerp with rotating target
-            currentPos.lerp(rotTarget, lerpFactor);
-            mesh.position.copy(currentPos);
-            
-            mesh.lookAt(0, mesh.position.y, 0);
-            mesh.rotateY(Math.PI);
-        }
+
+        // Slerp Quaternion
+        mesh.quaternion.slerp(targetQuat, lerpFactor);
     });
   }
 }
