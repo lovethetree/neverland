@@ -1,6 +1,9 @@
 /dist
 /src/images
 /src/images - 副本
+miniprogram/src/assets/images
+miniprogram/dist
+miniprogram/dist_clean
 .vite
 /node_modules
 .env

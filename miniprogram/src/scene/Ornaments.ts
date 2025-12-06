@@ -148,29 +148,27 @@ export class OrnamentsSystem {
     const lightCount = isMobile ? 400 : 540;
 
     // Materials
-    const giftMaterial = new THREE.MeshStandardMaterial({ 
-      color: '#FFD700', 
-      roughness: isMobile ? 0.1 : 0.4,
-      metalness: isMobile ? 1.0 : 1.0,
-      envMapIntensity: isMobile ? 1.0 : 1.0,
+    // Use MeshPhongMaterial for better performance and "gold" look without complex EnvMap
+    const giftMaterial = new THREE.MeshPhongMaterial({ 
+      color: '#553300', // Dark base
+      specular: '#FFD700', // Gold highlight
+      shininess: 30,
       emissive: '#553300', 
-      emissiveIntensity: isMobile ? 0.5 : 0.5
+      emissiveIntensity: 0.2
     });
     
-    const sphereMaterial = new THREE.MeshStandardMaterial({ 
-      color: '#D4AF37', 
-      roughness: isMobile ? 0.1 : 0.1,
-      metalness: isMobile ? 1.2 : 1.2,
+    const sphereMaterial = new THREE.MeshPhongMaterial({ 
+      color: '#553300', 
+      specular: '#D4AF37', // Gold highlight
+      shininess: 60,
       emissive: '#553300',
-      emissiveIntensity: isMobile ? 1.0 : 1.0, 
-      envMapIntensity: isMobile ? 0.5 : 0.5
+      emissiveIntensity: 0.2
     });
 
-    const lightMaterial = new THREE.MeshStandardMaterial({ 
+    const lightMaterial = new THREE.MeshLambertMaterial({ 
       color: '#FFFFE0', 
       emissive: '#FFFFE0', 
-      emissiveIntensity: isMobile ? 1.1 : 1.1,
-      toneMapped: false 
+      emissiveIntensity: 1.0
     });
 
     // Geometries

@@ -2,6 +2,7 @@ import * as THREE from 'three-platformize';
 import { OrbitControls } from 'three-platformize/examples/jsm/controls/OrbitControls';
 import { Foliage } from './Foliage';
 import { OrnamentsSystem } from './Ornaments';
+import { PhotoOrnaments } from './PhotoOrnaments';
 import { Star } from './Star';
 import { Snow } from './Snow';
 import { useStore } from '../store';
@@ -18,6 +19,7 @@ export class ChristmasTreeScene {
   
   foliage: Foliage;
   ornaments: OrnamentsSystem;
+  photoOrnaments: PhotoOrnaments;
   star: Star;
   snow: Snow;
   
@@ -90,6 +92,10 @@ export class ChristmasTreeScene {
     // Ornaments
     this.ornaments = new OrnamentsSystem();
     this.treeGroup.add(this.ornaments.group);
+
+    // Photo Ornaments
+    this.photoOrnaments = new PhotoOrnaments();
+    this.treeGroup.add(this.photoOrnaments.group);
     
     // Star
     this.star = new Star();
@@ -128,6 +134,7 @@ export class ChristmasTreeScene {
     // Update Components
     this.foliage.update(delta, isFormed, time);
     this.ornaments.update(delta, isFormed, time);
+    this.photoOrnaments.update(delta, isFormed, time);
     this.star.update(delta, isFormed);
     this.snow.update(time);
 
