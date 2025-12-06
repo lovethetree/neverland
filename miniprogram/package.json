@@ -1,0 +1,48 @@
+{
+  "name": "christmas-tree-miniprogram",
+  "version": "1.0.0",
+  "private": true,
+  "description": "Christmas Tree 3D for WeChat Mini Program",
+  "templateInfo": {
+    "name": "default",
+    "typescript": true,
+    "css": "sass"
+  },
+  "scripts": {
+    "build:weapp": "taro build --type weapp",
+    "dev:weapp": "taro build --type weapp --watch"
+  },
+  "browserslist": [
+    "last 3 versions",
+    "Android >= 4.1",
+    "ios >= 8"
+  ],
+  "author": "",
+  "dependencies": {
+    "@babel/runtime": "^7.7.7",
+    "@tarojs/components": "3.6.22",
+    "@tarojs/helper": "3.6.22",
+    "@tarojs/plugin-framework-react": "3.6.22",
+    "@tarojs/plugin-platform-weapp": "3.6.22",
+    "@tarojs/react": "3.6.22",
+    "@tarojs/runtime": "3.6.22",
+    "@tarojs/shared": "3.6.22",
+    "@tarojs/taro": "3.6.22",
+    "react": "^18.0.0",
+    "react-dom": "^18.0.0",
+    "three": "^0.160.0",
+    "three-platformize": "^1.133.0",
+    "zustand": "^4.5.0"
+  },
+  "devDependencies": {
+    "@babel/core": "^7.8.0",
+    "@tarojs/cli": "3.6.22",
+    "@tarojs/webpack5-runner": "3.6.22",
+    "@types/react": "^18.0.0",
+    "@types/three": "^0.160.0",
+    "@types/webpack-env": "^1.13.6",
+    "babel-preset-taro": "3.6.22",
+    "typescript": "^5.1.0",
+    "webpack": "^5.78.0"
+  }
+}
